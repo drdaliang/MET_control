@@ -1,6 +1,7 @@
 #include <aJSON.h>
 #include <PID_v1.h>
 #include <Scheduler.h>
+#include <Servo.h>
 
 //Serial configuration
 String serialBuffer = "";         // a string to hold incoming data
@@ -29,6 +30,10 @@ int fanHall1Pin = 11;
 int relay1Pin = 51;
 int relay2Pin = 52;
 int relay3Pin = 53;
+
+//throttle pins
+Servo throttle;
+int throttlePin = 27;
 
 //EventFlags
 const static int events_n = 24;
@@ -65,9 +70,9 @@ float resistorZero = 0;
 float resistorFS = 0;
 int ambientRH = 0;
 int ambientP = 0;
-int throttlePosition = 0;
-int throttleZero = 0;
-int throttleFS = 0;
+int throttlePosition;
+int throttleZero = 76;
+int throttleFS = 131;
 int serialNumber = 0;
 
 
@@ -91,6 +96,9 @@ void setup() {
   pinMode(relay2Pin, OUTPUT);
   pinMode(relay3Pin, OUTPUT);
 
+  //initialize throttle pins
+  throttle.attach(throttlePin);
+  throttlePosition = throttleZero;
   //initialize PID controller
   motorSpeedSet = 360;
   motorPID.SetMode(AUTOMATIC);
@@ -102,6 +110,7 @@ void setup() {
   Scheduler.startLoop(outputLoop);
   Scheduler.startLoop(motorLoop);
   Scheduler.startLoop(fanLoop);
+  Scheduler.startLoop(throttleLoop);
 }
 
 //PID motor control loop
@@ -170,6 +179,12 @@ void fanLoop(){
   analogWrite(fanPWMPin, fanPWM);
   yield();
   };
+
+
+  void throttleLoop(){
+    throttle.write(throttlePosition);
+    yield();
+    };
 
 void processMessage(aJsonObject * msg)
 {
@@ -490,7 +505,7 @@ void startMotor() {
 void stopMotor() {
   motorPWM=0;
   };
-  
+
 void inverseMotorDR() {
   motorDRStatus = !motorDRStatus;
   };
@@ -503,9 +518,14 @@ void stopFan() {
   };
 void setFanPWM() {};
 void setFanSpeed() {};
-void feedInThrottle() {};
-void feedOutThrottle() {};
-void setThrottleZero() {};
+void feedInThrottle() {
+if (throttlePosition +2 <= throttleFS){ throttlePosition+=2;}else{throttlePosition=throttleFS;};
+};
+void feedOutThrottle() {
+  if (throttlePosition -2 >= throttleZero){ throttlePosition -=2;}else{throttlePosition=throttleZero;};
+};
+void setThrottleZero() {
+ throttlePosition=throttleZero; };
 void setThrottleFS() {};
 void feedInResistor() {};
 void feedOutResistor() {};
@@ -522,4 +542,3 @@ void switch2ModeB() {
   relay2Status = 1;
   relay3Status = 1;
   };
-
