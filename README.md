@@ -1,4 +1,4 @@
 #MET (mini engine testbench) -- Control side
-by drdaliang
+by drdaliang & teoneon
 
 This is the arduino side for the mini engine testbench.
