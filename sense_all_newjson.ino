@@ -1,7 +1,10 @@
+#include <Wire.h>
+
 #include <aJSON.h>
 #include <PID_v1.h>
 #include <Scheduler.h>
 #include <Servo.h>
+
 
 //Serial configuration
 String serialBuffer = "";         // a string to hold incoming data
@@ -12,7 +15,6 @@ int last_print = 0;
 
 //Due Pin configuration
 //Motor pins
-
 int motorPWMPin = 5;
 int motorHall1Pin = 7;
 int motorHall2Pin = 8;
@@ -25,7 +27,7 @@ boolean motorDRStatus = LOW;
 
 //Fan pins
 int fanPWMPin = 10;
-int fanHall1Pin = 11;
+//int fanHall1Pin = 11;
 //Relay pins
 int relay1Pin = 51;
 int relay2Pin = 52;
@@ -96,13 +98,16 @@ void setup() {
   pinMode(relay2Pin, OUTPUT);
   pinMode(relay3Pin, OUTPUT);
 
+  //initialize fan pins
+  pinMode(fanPWMPin,OUTPUT);
+  Wire.begin();        // join i2c bus (address optional for master)
+  
   //initialize throttle pins
   throttle.attach(throttlePin);
   throttlePosition = throttleZero;
   //initialize PID controller
   motorSpeedSet = 360;
-  motorPID.SetMode(AUTOMATIC);
-  analogWriteResolution(12);
+  motorPID.SetMode(AUTOMATIC);  analogWriteResolution(12);
 
   // Scheduling initializaiton
   // "loop" is always started by default.
@@ -177,6 +182,28 @@ void motorLoop() {
 
 void fanLoop(){
   analogWrite(fanPWMPin, fanPWM);
+  Wire.requestFrom(2, 8);    // request 8 bytes from slave device #2
+    while(Wire.available())    // slave may send less than requested
+  { 
+    int c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+    fanSpeed = c;
+    c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+  //  Serial.print(c);         // print the character
+  //  Serial.print('\t');
+    c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+ //   Serial.print(c);         // print the character
+ //   Serial.print('\t');
+    c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+ //   Serial.println(c);         // print the character
+  }
   yield();
   };
 
@@ -511,7 +538,7 @@ void inverseMotorDR() {
   };
 void runOneRev() {};
 void startFan() {
- fanPWM = 1200;
+ fanPWM = 2000;
   };
 void stopFan() {
   fanPWM = 0;
@@ -527,8 +554,15 @@ void feedOutThrottle() {
 void setThrottleZero() {
  throttlePosition=throttleZero; };
 void setThrottleFS() {};
-void feedInResistor() {};
-void feedOutResistor() {};
+
+void feedInResistor() {
+  
+  };
+  
+void feedOutResistor() {
+  
+  };
+  
 void setResistorZero() {};
 void setResistorFS() {};
 void burnGLowplug() {};
