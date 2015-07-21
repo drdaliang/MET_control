@@ -200,20 +200,19 @@ void fanLoop(){
     c=c<<8;
     c |= Wire.read();
     fanSpeed = c;
-    c = Wire.read(); // receive a byte as character
-    c=c<<8;
-    c |= Wire.read();
-  //  Serial.print(c);         // print the character
-  //  Serial.print('\t');
-    c = Wire.read(); // receive a byte as character
-    c=c<<8;
-    c |= Wire.read();
- //   Serial.print(c);         // print the character
- //   Serial.print('\t');
-    c = Wire.read(); // receive a byte as character
-    c=c<<8;
-    c |= Wire.read();
- //   Serial.println(c);         // print the character
+    
+    int d = Wire.read(); // receive a byte as character
+    d=d<<8;
+    d |= Wire.read();
+
+    int e = Wire.read(); // receive a byte as character
+    e=e<<8;
+    e |= Wire.read();
+
+    int f = Wire.read(); // receive a byte as character
+    f=f<<8;
+    f |= Wire.read();
+  motorSpeed = (d+e+f)/3.0;
   }
   yield();
   };
