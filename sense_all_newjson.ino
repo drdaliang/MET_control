@@ -27,7 +27,7 @@ boolean motorDRStatus = LOW;
 
 //Fan pins
 int fanPWMPin = 10;
-//int fanHall1Pin = 11;
+
 //Relay pins
 int relay1Pin = 51;
 int relay2Pin = 52;
@@ -37,6 +37,11 @@ int relay3Pin = 53;
 Servo throttle;
 int throttlePin = 27;
 
+//Resistor pins
+int resistorPWMPin = 11;
+long resistorStopTime = 0;
+int resistorDRPin = 30;
+boolean resistorLastDR = LOW;
 //EventFlags
 const static int events_n = 24;
 boolean eventFlags[events_n];
@@ -72,7 +77,7 @@ float resistorZero = 0;
 float resistorFS = 0;
 int ambientRH = 0;
 int ambientP = 0;
-int throttlePosition;
+int throttlePosition=0;
 int throttleZero = 76;
 int throttleFS = 131;
 int serialNumber = 0;
@@ -101,13 +106,18 @@ void setup() {
   //initialize fan pins
   pinMode(fanPWMPin,OUTPUT);
   Wire.begin();        // join i2c bus (address optional for master)
+
+  //initialize resistor pins
+  pinMode(resistorPWMPin,OUTPUT);
+  pinMode(resistorDRPin, OUTPUT);
   
   //initialize throttle pins
   throttle.attach(throttlePin);
   throttlePosition = throttleZero;
   //initialize PID controller
   motorSpeedSet = 360;
-  motorPID.SetMode(AUTOMATIC);  analogWriteResolution(12);
+  motorPID.SetMode(AUTOMATIC);  
+  analogWriteResolution(12);
 
   // Scheduling initializaiton
   // "loop" is always started by default.
@@ -116,6 +126,7 @@ void setup() {
   Scheduler.startLoop(motorLoop);
   Scheduler.startLoop(fanLoop);
   Scheduler.startLoop(throttleLoop);
+  Scheduler.startLoop(resistorLoop);
 }
 
 //PID motor control loop
@@ -210,6 +221,10 @@ void fanLoop(){
 
   void throttleLoop(){
     throttle.write(throttlePosition);
+    yield();
+    };
+  void resistorLoop(){
+  //  if (millis()-resistorStopTime > 0){analogWrite(resistorPWMPin,0);};
     yield();
     };
 
@@ -556,11 +571,29 @@ void setThrottleZero() {
 void setThrottleFS() {};
 
 void feedInResistor() {
-  
+  digitalWrite(resistorDRPin, LOW);
+  analogWrite(resistorPWMPin,2048);
+  delay(200);
+      if (resistorLastDR == HIGH){
+    delay(800);
+      };
+  analogWrite(resistorPWMPin,0);
+  resistorStopTime = millis()+200;
+  resistorLastDR = LOW;
+  resistorPosition += 1.8;
   };
   
 void feedOutResistor() {
-  
+  digitalWrite(resistorDRPin,HIGH);
+  analogWrite(resistorPWMPin,2048);
+    delay(200);
+    if (resistorLastDR == LOW){
+    delay(800);
+      };
+  analogWrite(resistorPWMPin,0);
+  resistorStopTime = millis()+200;
+  resistorLastDR = HIGH;
+  resistorPosition -= 1.8;
   };
   
 void setResistorZero() {};
