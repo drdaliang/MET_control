@@ -1,5 +1,5 @@
 #include <Wire.h>
-
+#include "HX711.h"
 #include <aJSON.h>
 #include <PID_v1.h>
 #include <Scheduler.h>
@@ -45,6 +45,10 @@ boolean resistorLastDR = LOW;
 //EventFlags
 const static int events_n = 24;
 boolean eventFlags[events_n];
+
+//HX711 force transducer pins
+HX711 torqueSensor(32, 33);   
+HX711 weightSensor(34, 35);
 
 //output data initialize
 boolean motorPIDEnableFlag = true;
@@ -110,7 +114,7 @@ void setup() {
   //initialize resistor pins
   pinMode(resistorPWMPin,OUTPUT);
   pinMode(resistorDRPin, OUTPUT);
-  
+
   //initialize throttle pins
   throttle.attach(throttlePin);
   throttlePosition = throttleZero;
@@ -119,6 +123,12 @@ void setup() {
   motorPID.SetMode(AUTOMATIC);  
   analogWriteResolution(12);
 
+  //initialize torque sensor
+  torqueSensor.set_scale(-2116.f);     // this value is obtained by calibrating the scale with known weights
+  torqueSensor.tare(10);               // reset the scale to 0
+  weightSensor.set_scale(6817.f);     // this value is obtained by calibrating the scale with known weights;
+  weightSensor.tare(); 
+  
   // Scheduling initializaiton
   // "loop" is always started by default.
   Scheduler.startLoop(inputLoop);
@@ -127,9 +137,10 @@ void setup() {
   Scheduler.startLoop(fanLoop);
   Scheduler.startLoop(throttleLoop);
   Scheduler.startLoop(resistorLoop);
+  Scheduler.startLoop(forceLoop);
 }
 
-//PID motor control loop
+//Processing sensor data
 void loop() {
   //calculating PID
   // motorSpeed = measureMotorFrequency();
@@ -169,7 +180,7 @@ void inputLoop() {
 void outputLoop() {
   //Write JSON to Serial Port
   //Reserve JSON memory
-  if (millis() - last_print > 830) {
+  if (millis() - last_print > 823) {
     /* One second elapsed, send message. */
     aJsonObject *msg = createMessage();
     aJson.print(msg, &serial_stream);
@@ -217,6 +228,11 @@ void fanLoop(){
   yield();
   };
 
+void forceLoop(){
+  armForce = torqueSensor.get_units();
+  fueltankWeight = weightSensor.get_units();
+  yield();
+  };
 
   void throttleLoop(){
     throttle.write(throttlePosition);
