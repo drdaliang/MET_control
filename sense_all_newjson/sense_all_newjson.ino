@@ -4,7 +4,7 @@
 #include <PID_v1.h>
 #include <Scheduler.h>
 #include <Servo.h>
-
+#include <Adafruit_BMP085.h>
 
 //Serial configuration
 String serialBuffer = "";         // a string to hold incoming data
@@ -49,6 +49,9 @@ boolean eventFlags[events_n];
 //HX711 force transducer pins
 HX711 torqueSensor(32, 33);   
 HX711 weightSensor(34, 35);
+
+//BMP085 pressure sensor, I2C
+Adafruit_BMP085 bmp;
 
 //output data initialize
 boolean motorPIDEnableFlag = true;
@@ -128,6 +131,9 @@ void setup() {
   torqueSensor.tare(10);               // reset the scale to 0
   weightSensor.set_scale(6817.f);     // this value is obtained by calibrating the scale with known weights;
   weightSensor.tare(); 
+
+  //initialize BMP085
+  bmp.begin();
   
   // Scheduling initializaiton
   // "loop" is always started by default.
@@ -138,6 +144,7 @@ void setup() {
   Scheduler.startLoop(throttleLoop);
   Scheduler.startLoop(resistorLoop);
   Scheduler.startLoop(forceLoop);
+  Scheduler.startLoop(bmpLoop);
 }
 
 //Processing sensor data
@@ -242,6 +249,12 @@ void forceLoop(){
   //  if (millis()-resistorStopTime > 0){analogWrite(resistorPWMPin,0);};
     yield();
     };
+
+void bmpLoop(){
+  ambientTemp1 = bmp.readTemperature();
+  ambientP = bmp.readPressure();
+  yield();
+  };
 
 void processMessage(aJsonObject * msg)
 {
