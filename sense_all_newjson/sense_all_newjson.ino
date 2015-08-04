@@ -44,7 +44,7 @@ int resistorDRPin = 30;
 boolean resistorLastDR = LOW;
 //EventFlags
 const static int events_n = 24;
-boolean eventFlags[events_n];
+int eventFlags=0;
 
 //HX711 force transducer pins
 HX711 torqueSensor(32, 33);   
@@ -60,6 +60,7 @@ boolean relay1Status = 1;
 boolean relay2Status = 1;
 boolean relay3Status = 1;
 float motorSpeed = 0;
+unsigned short c = 0;//speed i2c reading buffer
 float motorSpeedSet = 360;
 float motorPWM = 0;
 float motorPIDp = 0.8;
@@ -85,8 +86,8 @@ float resistorFS = 0;
 int ambientRH = 0;
 int ambientP = 0;
 int throttlePosition=0;
-int throttleZero = 50;
-int throttleFS = 131;
+int throttleZero = 52;
+int throttleFS = 110;
 int serialNumber = 0;
 
 
@@ -214,23 +215,28 @@ void fanLoop(){
   Wire.requestFrom(2, 8);    // request 8 bytes from slave device #2
     while(Wire.available())    // slave may send less than requested
   { 
-    int c = Wire.read(); // receive a byte as character
+    c = Wire.read(); // receive a byte as character
     c=c<<8;
     c |= Wire.read();
     fanSpeed = c;
     
-    int d = Wire.read(); // receive a byte as character
-    d=d<<8;
-    d |= Wire.read();
-
-    int e = Wire.read(); // receive a byte as character
-    e=e<<8;
-    e |= Wire.read();
-
-    int f = Wire.read(); // receive a byte as character
-    f=f<<8;
-    f |= Wire.read();
-  motorSpeed = (d+e+f)/3.0;
+    c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+    c=c*5.18;
+    if (c<20000){motorSpeed = c;};
+    
+    c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+    c=c*5.18;
+    if (c<20000){motorSpeed = (motorSpeed+c)/2;};
+    
+    c = Wire.read(); // receive a byte as character
+    c=c<<8;
+    c |= Wire.read();
+    c=c*5.18;
+    if (c<20000){motorSpeed = (motorSpeed+c)/2;};
   }
   yield();
   };
@@ -271,100 +277,37 @@ void processMessage(aJsonObject * msg)
   if (!eventCMD) {
   //  Serial.println("no event CMD");
   } else {
-    if (eventCMD->type != aJson_Array) {
-      Serial.print("invalid data type ");
-      Serial.println(eventCMD->type, DEC);
-    } else {
-      int events_n_real = aJson.getArraySize(eventCMD);
-      if (events_n != events_n_real) {
-        Serial.print("invalid event array size ");
-        Serial.println(events_n_real);
-      } else {
-        aJsonObject *c = eventCMD->child;
-        for (int i = 0; i < events_n_real; i++) {
-          eventFlags[i] = c->valuebool;
-          c = c->next;
-//          Serial.print("getting events ");
-//          Serial.print(i);
-//          Serial.println(eventFlags[i]);
-        }
-        //get these events working
-        if (eventFlags[0]) {
-          setBoolean();
-        };
-        if (eventFlags[1]) {
-          setFloat();
-        };
-        if (eventFlags[2]) {
-          setInt();
-        };
-        if (eventFlags[3]) {
-          setMotorSpeed();
-        };
-        if (eventFlags[4]) {
-          setMotorPWM();
-        };
-        if (eventFlags[5]) {
-          startMotor();
-        };
-        if (eventFlags[6]) {
-          stopMotor();
-        };
-        if (eventFlags[7]) {
-          inverseMotorDR();
-        };
-        if (eventFlags[8]) {
-          runOneRev();
-        };
-        if (eventFlags[9]) {
-          startFan();
-        };
-        if (eventFlags[10]) {
-          stopFan();
-        };
-        if (eventFlags[11]) {
-          setFanPWM();
-        };
-        if (eventFlags[12]) {
-          setFanSpeed();
-        };
-        if (eventFlags[13]) {
-          feedInThrottle();
-        };
-        if (eventFlags[14]) {
-          feedOutThrottle();
-        };
-        if (eventFlags[15]) {
-          setThrottleZero();
-        };
-        if (eventFlags[16]) {
-          setThrottleFS();
-        };
-        if (eventFlags[17]) {
-          feedInResistor();
-        };
-        if (eventFlags[18]) {
-          feedOutResistor();
-        };
-        if (eventFlags[19]) {
-          setResistorZero();
-        };
-        if (eventFlags[20]) {
-          setResistorFS();
-        };
-        if (eventFlags[21]) {
-          burnGLowplug();
-        };
-        if (eventFlags[22]) {
-          switch2ModeA();
-        };
-        if (eventFlags[23]) {
-          switch2ModeB();
-        };
+         aJsonObject *c = eventCMD;
+         eventFlags = c->valueint;
+  //        Serial.print("getting events ");
+  //        Serial.println(eventFlags);
 
+        //get these events working
+        if (eventFlags==0){setBoolean();};
+        if (eventFlags==1){setFloat();};
+        if (eventFlags==2){setInt();};
+        if (eventFlags==3){setMotorSpeed();};
+        if (eventFlags==4){setMotorPWM();};
+        if (eventFlags==5){startMotor();};
+        if (eventFlags==6){stopMotor();};
+        if (eventFlags==7){inverseMotorDR();};
+        if (eventFlags==8){runOneRev();};
+        if (eventFlags==9){startFan();};
+        if (eventFlags==10){stopFan();};
+        if (eventFlags==11){setFanPWM();};
+        if (eventFlags==12){setFanSpeed();};
+        if (eventFlags==13){feedInThrottle();};
+        if (eventFlags==14){feedOutThrottle();};
+        if (eventFlags==15){setThrottleZero();};
+        if (eventFlags==16){setThrottleFS();};
+        if (eventFlags==17){feedInResistor();};
+        if (eventFlags==18){feedOutResistor();};
+        if (eventFlags==19){setResistorZero();};
+        if (eventFlags==20){setResistorFS();};
+        if (eventFlags==21){burnGLowplug();};
+        if (eventFlags==22){switch2ModeA();};
+        if (eventFlags==23){switch2ModeB();};
       }
-    }
-  }
 
   if (!booleanCMD) {
   //  Serial.println("no boolean CMD");
@@ -579,7 +522,15 @@ void stopMotor() {
 void inverseMotorDR() {
   motorDRStatus = !motorDRStatus;
   };
-void runOneRev() {};
+void runOneRev() {
+  motorPWM = 4000;
+  delay(2000);
+  throttlePosition+=2;
+  delay(1000);
+  motorPWM = 0;
+  switch2ModeB();
+  };
+  
 void startFan() {
  fanPWM = 2000;
   };
